@@ -107,8 +107,7 @@ export default function SistemaBasicoProduccion() {
     setSkus((prev) =>
       prev.map((sku) => {
         const values = (sku.tiemposSKU || "")
-          .split(/[,
-;\s]+/)
+          .split(/[,;\s]+/)
           .map((t) => t.trim())
           .filter((t) => t.length)
           .map((t) => Number(t))
