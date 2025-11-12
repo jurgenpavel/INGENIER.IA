@@ -1,6 +1,5 @@
-
 'use client';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 type TipoOperacion = "Manufactura" | "Automático";
 
@@ -27,6 +26,7 @@ type SKUExt = {
   fracciones: Fraccion[];
   resumenTiempoRitmo: number | null;
   resumenTiempoEstandar: number | null;
+  includeEnRitmo: boolean; // NUEVO: controlar si entra al cálculo del Tiempo Ritmo (global)
 };
 
 const fmt3 = (v: number | null | undefined) =>
@@ -51,6 +51,7 @@ const defaultSku = (): SKUExt => ({
   fracciones: [],
   resumenTiempoRitmo: null,
   resumenTiempoEstandar: null,
+  includeEnRitmo: true, // NUEVO
 });
 
 export default function SistemaBasicoProduccion() {
@@ -146,6 +147,17 @@ export default function SistemaBasicoProduccion() {
     holgura: s.holgura,
     fracciones: s.numeroFracciones,
   })))]);
+
+  // NUEVO: Tiempo Ritmo (global) = máximo TE(SKU) de los seleccionados
+  const tiempoRitmoGlobal = useMemo(() => {
+    const seleccionados = skus.filter(
+      (s) => s.includeEnRitmo && s.resumenTiempoEstandar !== null
+    );
+    if (!seleccionados.length) return null;
+    return Number(
+      Math.max(...seleccionados.map((s) => s.resumenTiempoEstandar as number)).toFixed(6)
+    );
+  }, [skus]);
 
   return (
     <div className="p-6 max-w-[1200px] mx-auto space-y-8">
@@ -251,6 +263,58 @@ export default function SistemaBasicoProduccion() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* NUEVO: Cálculo de Tiempo Ritmo (máximo de TE seleccionados) */}
+        <div className="mt-4 border rounded-2xl p-4 bg-white shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-base font-semibold">Cálculo de Tiempo Ritmo (seleccione SKUs a considerar)</h3>
+            <button
+              onClick={() => setSkus((prev) => prev.map((s) => ({ ...s, includeEnRitmo: true })))}
+              className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm"
+            >
+              Seleccionar todos
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full border rounded-xl overflow-hidden text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-2 border">Incluir</th>
+                  <th className="p-2 border">SKU</th>
+                  <th className="p-2 border">Operación</th>
+                  <th className="p-2 border">TE (SKU)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {skus.map((s, i) => (
+                  <tr key={`sel-${i}`} className="odd:bg-white even:bg-gray-50">
+                    <td className="p-2 border text-center">
+                      <input
+                        type="checkbox"
+                        checked={s.includeEnRitmo}
+                        onChange={(e) => updateSku(i, { includeEnRitmo: e.target.checked })}
+                      />
+                    </td>
+                    <td className="p-2 border">{s.id || "—"}</td>
+                    <td className="p-2 border">{s.operacion || "—"}</td>
+                    <td className="p-2 border text-right">{fmt3(s.resumenTiempoEstandar)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Regla: <span className="font-medium">Tiempo Ritmo = máximo</span> de los{" "}
+              <span className="font-medium">TE (SKU)</span> seleccionados.
+            </div>
+            <div className="text-base font-semibold">
+              Tiempo Ritmo (global): {fmt3(tiempoRitmoGlobal)}
+            </div>
+          </div>
         </div>
       </section>
 
